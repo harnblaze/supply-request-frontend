@@ -20,7 +20,14 @@ export class ApiError extends Error {
 }
 
 type QueryPrimitive = string | number | boolean | null | undefined
-export type QueryParams = Record<string, QueryPrimitive>
+export type QueryParams = object
+
+const isQueryPrimitive = (value: unknown): value is QueryPrimitive =>
+  value === null ||
+  value === undefined ||
+  typeof value === 'string' ||
+  typeof value === 'number' ||
+  typeof value === 'boolean'
 
 const buildUrl = (path: string, query?: QueryParams) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
@@ -28,7 +35,8 @@ const buildUrl = (path: string, query?: QueryParams) => {
 
   if (!query) return url.toString()
 
-  Object.entries(query).forEach(([key, value]) => {
+  Object.entries(query as Record<string, unknown>).forEach(([key, value]) => {
+    if (!isQueryPrimitive(value)) return
     if (value === undefined || value === null) return
     url.searchParams.set(key, String(value))
   })
