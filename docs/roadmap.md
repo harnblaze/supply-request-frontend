@@ -21,39 +21,39 @@
   - [x] `VITE_UPLOADS_BASE_URL` (если отличается; иначе derive от API)
 ---
 ## 1) Архитектура (FSD) и доменные типы
-- [ ] Разложить по слоям FSD (минимум):
-  - [ ] `src/app` — роутер, провайдеры, глобальные стили
-  - [ ] `src/shared` — ui-kit обёртки, utils, форматтеры, http client
-  - [ ] `src/entities` — типы/модели `application`, `invoice`, `material`
+- [x] Разложить по слоям FSD (минимум):
+  - [x] `src/app` — роутер, провайдеры, глобальные стили
+  - [x] `src/shared` — ui-kit обёртки, utils, форматтеры, http client
+  - [x] `src/entities` — типы/модели `application`, `invoice`, `material`
   - [ ] `src/features` — сценарии: создание/редактирование, загрузка файлов, смена статусов
-  - [ ] `src/pages` — страницы `/`, `/applications/:id`, `/materials`
-  - [ ] `src/widgets` — крупные блоки: таблицы, фильтры, хедеры страниц
-- [ ] Ввести доменные типы (ориентируясь на Swagger):
-  - [ ] `ApplicationStatus = DRAFT | SENT_TO_SUPPLY | PAID | PARTIALLY_DELIVERED | FULLY_DELIVERED`
-  - [ ] `InvoiceStatus = NEW | SELECTED_FOR_PAYMENT | PAID`
-  - [ ] `DeliveryStatus = NOT_DELIVERED | PARTIALLY | DELIVERED`
-- [ ] Справочники/маппинги:
-  - [ ] подписи статусов на RU
-  - [ ] tailwind-классы подсветки строк по статусам
-  - [ ] варианты для `<Select>` (label/value)
+  - [x] `src/pages` — страницы `/`, `/applications/:id`, `/materials`
+  - [x] `src/widgets` — крупные блоки: таблицы, фильтры, хедеры страниц
+- [x] Ввести доменные типы (ориентируясь на Swagger):
+  - [x] `ApplicationStatus = DRAFT | SENT_TO_SUPPLY | PAID | PARTIALLY_DELIVERED | FULLY_DELIVERED`
+  - [x] `InvoiceStatus = NEW | SELECTED_FOR_PAYMENT | PAID`
+  - [x] `DeliveryStatus = NOT_DELIVERED | PARTIALLY | DELIVERED`
+- [x] Справочники/маппинги:
+  - [x] подписи статусов на RU
+  - [x] tailwind-классы подсветки строк по статусам
+  - [x] варианты для `<Select>` (label/value)
 
 ## 2) API-интеграция по `docs/swagger.json`
-- [ ] Прочитать `docs/swagger.json` и зафиксировать эндпоинты для:
-  - [ ] Applications: list/get/create/update/upload word/download word
-  - [ ] Invoices: list by application/create/update status/upload pdf/download pdf
-  - [ ] Materials: list/search/create/update deliveredQuantity (и т.п.)
-- [ ] Определить стратегию интеграции:
-  - [ ] вариант A: ручной typed-клиент (`fetch`) + zod-валидация ответов на границе
+- [x] Прочитать `docs/swagger.json` и зафиксировать эндпоинты для:
+  - [x] Applications: list/get/create/update/upload word (без download в Swagger)
+  - [x] Invoices: list by application/create/update status/upload pdf (без download в Swagger)
+  - [x] Materials: list/search/create/update deliveredQuantity
+- [x] Определить стратегию интеграции:
+  - [x] вариант A: ручной typed-клиент (`fetch`) (на этом шаге без zod)
   - [ ] вариант B: автогенерация клиента (openapi-typescript / openapi-fetch) + thin wrapper
-- [ ] Реализовать `shared/api/httpClient`:
-  - [ ] базовый `fetch` wrapper с обработкой ошибок, таймаутом, JSON и `FormData`
-  - [ ] единый формат ошибок для UI (toast + inline message)
-- [ ] Реализовать `shared/api` модули:
-  - [ ] `applicationsApi`
-  - [ ] `invoicesApi`
-  - [ ] `materialsApi`
-- [ ] Реализовать загрузку файлов:
-  - [ ] `multipart/form-data` запросы для Word/PDF
+- [x] Реализовать `shared/api/httpClient`:
+  - [x] базовый `fetch` wrapper с обработкой ошибок, таймаутом, JSON и `FormData`
+  - [x] единый формат ошибок для UI (через `ApiError`, дальше подключим toast/inline)
+- [x] Реализовать `shared/api` модули:
+  - [x] `applicationsApi`
+  - [x] `invoicesApi`
+  - [x] `materialsApi`
+- [x] Реализовать загрузку файлов:
+  - [x] `multipart/form-data` запросы для Word/PDF
   - [ ] ссылки на скачивание файлов (через `uploads` base url)
 ---
 ## 3) Общие утилиты UI/UX
