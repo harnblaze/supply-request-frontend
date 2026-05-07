@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+---
+
+# Feature-Sliced Design (FSD) Rule for Cursor
+
+Follow the Feature-Sliced Design (FSD) architectural style for organizing code. FSD ensures code is understandable, stable, and adaptable to changing business requirements.
+
+## Layers
+Organize code into the following standard layers:
+- **app**: Application initialization, providers, routers, global styles.
+- **shared**: Shared logic, utilities, constants.
+- **entities**: Data models, types.
+- **features**: Business logic organized by feature slices.
+- **pages**: Page components.
+- **widgets**: Reusable UI components.
+- **styles**: Global styles.
+
+## Feature Slices
+- Each feature should have its own folder in `src/features/{feature-name}/`.
+- Inside the feature folder, create subfolders as needed:
+  - **api**: For API calls and data fetching.
+  - **lib**: For business logic and helper functions.
+  - **ui**: For UI components specific to the feature.
+- Include an `index.ts` file in each feature folder to export the public API (barrel file).
+
+## Dependencies
+- Ensure correct dependencies between layers:
+  - Lower layers (e.g., `features`) can depend on upper layers (e.g., `entities`, `shared`).
+  - Modules within the same layer should not depend on each other directly.
+  - Pages can depend on `features`, `widgets`, `entities`, and `shared`.
+  - Widgets can depend on `shared` and `entities`.
+
+## Naming Conventions
+- Use kebab-case for folder names (e.g., `my-feature`).
+- Use camelCase for file names (e.g., `myFeature.ts`).
+- Use PascalCase for class and type names.
+
+## Best Practices
+- Each module should focus on a single responsibility.
+- Use barrel files (`index.ts`) to export the public API of a module.
+- Avoid deep nesting of folders; keep the structure flat within layers.
+
+## Examples
+- When creating a new page, place it in `src/pages/{page-name}/` and import necessary features and widgets.
+- When creating a new feature, create `src/features/{feature-name}/` with subfolders `api`, `lib`, `ui`, and an `index.ts` for exports.
+- When writing imports, ensure they are from the correct layers (e.g., pages import from `features`, not directly from `entities`).

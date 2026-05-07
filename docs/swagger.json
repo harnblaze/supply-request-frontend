@@ -1,0 +1,541 @@
+{
+    "openapi": "3.0.0",
+    "paths": {
+      "/": {
+        "get": {
+          "operationId": "AppController_getHello",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["App"]
+        }
+      },
+      "/applications": {
+        "get": {
+          "operationId": "ApplicationsController_list",
+          "parameters": [
+            {
+              "name": "applicationNumber",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "example": "Z-2026-000123",
+                "type": "string"
+              }
+            },
+            {
+              "name": "status",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "SENT_TO_SUPPLY",
+                  "PAID",
+                  "PARTIALLY_DELIVERED",
+                  "FULLY_DELIVERED"
+                ]
+              }
+            },
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "default": 1,
+                "type": "number"
+              }
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20,
+                "type": "number"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["applications"]
+        },
+        "post": {
+          "operationId": "ApplicationsController_create",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateApplicationDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": ""
+            }
+          },
+          "tags": ["applications"]
+        }
+      },
+      "/applications/{id}": {
+        "get": {
+          "operationId": "ApplicationsController_getById",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["applications"]
+        },
+        "patch": {
+          "operationId": "ApplicationsController_update",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateApplicationDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["applications"]
+        }
+      },
+      "/applications/{id}/invoices": {
+        "get": {
+          "operationId": "ApplicationsController_listInvoices",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["applications"]
+        }
+      },
+      "/applications/{id}/materials": {
+        "get": {
+          "operationId": "ApplicationsController_listMaterials",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["applications"]
+        }
+      },
+      "/applications/{id}/word-file": {
+        "patch": {
+          "operationId": "ApplicationsFilesController_uploadWord",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["applications"]
+        }
+      },
+      "/invoices": {
+        "post": {
+          "operationId": "InvoicesController_create",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateInvoiceDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": ""
+            }
+          },
+          "tags": ["invoices"]
+        }
+      },
+      "/invoices/{id}/select-for-payment": {
+        "patch": {
+          "operationId": "InvoicesController_selectForPayment",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["invoices"]
+        }
+      },
+      "/invoices/{id}/mark-paid": {
+        "patch": {
+          "operationId": "InvoicesController_markPaid",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["invoices"]
+        }
+      },
+      "/invoices/{id}": {
+        "patch": {
+          "operationId": "InvoicesController_update",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateInvoiceDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["invoices"]
+        }
+      },
+      "/invoices/{id}/pdf-file": {
+        "patch": {
+          "operationId": "InvoicesFilesController_uploadPdf",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["invoices"]
+        }
+      },
+      "/materials": {
+        "post": {
+          "operationId": "MaterialsController_create",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateMaterialDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": ""
+            }
+          },
+          "tags": ["materials"]
+        },
+        "get": {
+          "operationId": "MaterialsController_list",
+          "parameters": [
+            {
+              "name": "name",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "example": "кабель",
+                "type": "string"
+              }
+            },
+            {
+              "name": "applicationNumber",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "example": "Z-2026-000123",
+                "type": "string"
+              }
+            },
+            {
+              "name": "page",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "default": 1,
+                "type": "number"
+              }
+            },
+            {
+              "name": "limit",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20,
+                "type": "number"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["materials"]
+        }
+      },
+      "/materials/{id}": {
+        "patch": {
+          "operationId": "MaterialsController_update",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateMaterialDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": ""
+            }
+          },
+          "tags": ["materials"]
+        }
+      }
+    },
+    "info": {
+      "title": "Supply Request API",
+      "description": "Backend API for supply request tracker",
+      "version": "1.0",
+      "contact": {}
+    },
+    "tags": [],
+    "servers": [],
+    "components": {
+      "schemas": {
+        "CreateApplicationDto": {
+          "type": "object",
+          "properties": {
+            "applicationNumber": {
+              "type": "string",
+              "maxLength": 128,
+              "example": "Z-2026-000123"
+            },
+            "comment": {
+              "type": "string",
+              "maxLength": 10000
+            }
+          }
+        },
+        "UpdateApplicationDto": {
+          "type": "object",
+          "properties": {
+            "applicationNumber": {
+              "type": "string",
+              "maxLength": 128,
+              "example": "Z-2026-000123"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["DRAFT", "SENT_TO_SUPPLY"]
+            },
+            "comment": {
+              "type": "string",
+              "maxLength": 10000
+            }
+          }
+        },
+        "CreateInvoiceDto": {
+          "type": "object",
+          "properties": {
+            "applicationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "supplier": {
+              "type": "string",
+              "maxLength": 256,
+              "example": "ООО Ромашка"
+            },
+            "amount": {
+              "type": "string",
+              "example": "12345.67",
+              "description": "Decimal string"
+            }
+          },
+          "required": ["applicationId", "supplier", "amount"]
+        },
+        "UpdateInvoiceDto": {
+          "type": "object",
+          "properties": {
+            "supplier": {
+              "type": "string",
+              "maxLength": 256,
+              "example": "ООО Ромашка"
+            },
+            "amount": {
+              "type": "string",
+              "example": "12345.67",
+              "description": "Decimal string"
+            }
+          }
+        },
+        "CreateMaterialDto": {
+          "type": "object",
+          "properties": {
+            "applicationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 512,
+              "example": "Кабель ВВГнг 3x2.5"
+            },
+            "orderedQuantity": {
+              "type": "number",
+              "minimum": 1,
+              "example": 10
+            },
+            "deliveredQuantity": {
+              "type": "number",
+              "minimum": 0,
+              "example": 0
+            }
+          },
+          "required": ["applicationId", "name", "orderedQuantity"]
+        },
+        "UpdateMaterialDto": {
+          "type": "object",
+          "properties": {
+            "deliveredQuantity": {
+              "type": "number",
+              "minimum": 0,
+              "example": 3
+            }
+          }
+        }
+      }
+    }
+  }
