@@ -15,7 +15,7 @@ import {
   applicationStatusSelectOptions,
 } from '@/entities/application'
 import { applicationsApi } from '@/shared/api'
-import { formatDateTimeRu, toastApiError, toastInfo, useDebouncedValue } from '@/shared/lib'
+import { formatDateTimeRu, toastApiError, useDebouncedValue } from '@/shared/lib'
 import { Button } from '@/shared/ui/button'
 import { EmptyState } from '@/shared/ui/emptyState'
 import { Input } from '@/shared/ui/input'
@@ -46,9 +46,7 @@ export const ApplicationsListPage = () => {
   const selectedStatusLabel = status ? applicationStatusLabelRu[status] : undefined
 
   const handleCreateClick = () => {
-    toastInfo('Пока не реализовано', {
-      description: 'Создание заявки будет в следующих пунктах roadmap.',
-    })
+    navigate('/applications/new')
   }
 
   const handleRowOpen = useCallback(

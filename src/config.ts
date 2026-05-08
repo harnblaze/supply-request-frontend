@@ -13,7 +13,7 @@ const getRequiredEnv = (key: string, fallback?: string) => {
 const withoutTrailingSlash = (value: string) => value.replace(/\/+$/, '')
 
 export const API_BASE_URL = withoutTrailingSlash(
-  getRequiredEnv('VITE_API_BASE_URL', 'http://localhost:3000/api'),
+  getRequiredEnv('VITE_API_BASE_URL', 'http://localhost:3000'),
 )
 
 export const UPLOADS_BASE_URL = withoutTrailingSlash(

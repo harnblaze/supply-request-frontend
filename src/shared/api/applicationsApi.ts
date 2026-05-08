@@ -30,7 +30,7 @@ export const applicationsApi = {
     options?: { fieldName?: string },
   ) => {
     const formData = new FormData()
-    formData.append(options?.fieldName ?? 'file', file)
+    formData.append(options?.fieldName ?? 'wordFile', file)
     return httpClient.patchFormData<TResponse>(`/applications/${applicationId}/word-file`, formData)
   },
 }
