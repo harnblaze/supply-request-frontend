@@ -9,11 +9,11 @@ export const applicationStatusLabelRu: Record<ApplicationStatus, string> = {
 }
 
 export const applicationStatusRowClassName: Record<ApplicationStatus, string> = {
-  FULLY_DELIVERED: 'bg-emerald-50/60',
-  PARTIALLY_DELIVERED: 'bg-amber-50/70',
-  PAID: 'bg-sky-50/70',
-  DRAFT: 'bg-muted/30',
-  SENT_TO_SUPPLY: 'bg-violet-50/70',
+  FULLY_DELIVERED: 'bg-emerald-100/50 hover:bg-emerald-100/70',
+  PARTIALLY_DELIVERED: 'bg-amber-100/50 hover:bg-amber-100/70',
+  PAID: 'bg-sky-100/50 hover:bg-sky-100/70',
+  DRAFT: 'bg-muted/30 hover:bg-muted/50',
+  SENT_TO_SUPPLY: 'bg-violet-100/50 hover:bg-violet-100/70',
 }
 
 export const applicationStatusSelectOptions = (

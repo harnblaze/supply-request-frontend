@@ -15,12 +15,14 @@ export interface EditInvoiceDialogProps {
   invoice: Invoice
   disabled?: boolean
   onUpdated?: () => void
+  trigger?: React.ReactNode
 }
 
 export const EditInvoiceDialog = ({
   invoice,
   disabled = false,
   onUpdated,
+  trigger,
 }: EditInvoiceDialogProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -56,15 +58,17 @@ export const EditInvoiceDialog = ({
     <Dialog open={isOpen} onOpenChange={(next) => setIsOpen(next)}>
       <DialogTrigger
         render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={disabled}
-            aria-label="Редактировать счет"
-          >
-            Редактировать
-          </Button>
+          trigger ?? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={disabled}
+              aria-label="Редактировать счет"
+            >
+              Редактировать
+            </Button>
+          )
         }
       />
       <DialogContent className="sm:max-w-lg">

@@ -7,9 +7,9 @@ export const deliveryStatusLabelRu: Record<DeliveryStatus, string> = {
 }
 
 export const deliveryStatusRowClassName: Record<DeliveryStatus, string> = {
-  DELIVERED: 'bg-emerald-50/60',
-  PARTIALLY: 'bg-amber-50/70',
-  NOT_DELIVERED: 'bg-rose-50/60',
+  DELIVERED: 'bg-emerald-100/50 hover:bg-emerald-100/70',
+  PARTIALLY: 'bg-amber-100/50 hover:bg-amber-100/70',
+  NOT_DELIVERED: 'bg-rose-100/50 hover:bg-rose-100/70',
 }
 
 export const deliveryStatusSelectOptions = (

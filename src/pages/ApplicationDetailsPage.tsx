@@ -37,7 +37,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TableSkeleton } from '@/shared/ui/tableSkeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { updateableApplicationStatuses } from '@/features/application-editor/lib/applicationEditorTypes'
-import { MoreHorizontalIcon } from 'lucide-react'
+import { MoreHorizontalIcon, PencilIcon } from 'lucide-react'
 
 export const ApplicationDetailsPage = () => {
   const { id } = useParams()
@@ -202,15 +202,6 @@ export const ApplicationDetailsPage = () => {
           return (
             <div className="flex flex-col items-end gap-1 sm:flex-row sm:justify-end sm:gap-2">
               <div className="hidden sm:flex sm:flex-row sm:items-center sm:justify-end sm:gap-2">
-                <EditInvoiceDialog
-                  invoice={row.original}
-                  disabled={isBusy}
-                  onUpdated={() => {
-                    invalidateApplicationAggregate(id)
-                    void refetchInvoices({ force: true })
-                    void refetchApplication({ force: true })
-                  }}
-                />
                 {status === 'NEW' ? (
                   <Button
                     type="button"
@@ -233,6 +224,26 @@ export const ApplicationDetailsPage = () => {
                     {isBusy ? '...' : 'Отметить как оплаченный'}
                   </Button>
                 ) : null}
+                <EditInvoiceDialog
+                  invoice={row.original}
+                  disabled={isBusy}
+                  onUpdated={() => {
+                    invalidateApplicationAggregate(id)
+                    void refetchInvoices({ force: true })
+                    void refetchApplication({ force: true })
+                  }}
+                  trigger={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={isBusy}
+                      aria-label="Редактировать счет"
+                    >
+                      <PencilIcon />
+                    </Button>
+                  }
+                />
               </div>
 
               <div className="sm:hidden">
@@ -251,17 +262,6 @@ export const ApplicationDetailsPage = () => {
                     <MoreHorizontalIcon />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <div className="px-1 py-1">
-                      <EditInvoiceDialog
-                        invoice={row.original}
-                        disabled={isBusy}
-                        onUpdated={() => {
-                          invalidateApplicationAggregate(id)
-                          void refetchInvoices({ force: true })
-                          void refetchApplication({ force: true })
-                        }}
-                      />
-                    </div>
                     {status === 'NEW' ? (
                       <DropdownMenuItem
                         onClick={(e) => {
@@ -281,6 +281,17 @@ export const ApplicationDetailsPage = () => {
                         Отметить как оплаченный
                       </DropdownMenuItem>
                     ) : null}
+                    <div className="px-1 py-1">
+                      <EditInvoiceDialog
+                        invoice={row.original}
+                        disabled={isBusy}
+                        onUpdated={() => {
+                          invalidateApplicationAggregate(id)
+                          void refetchInvoices({ force: true })
+                          void refetchApplication({ force: true })
+                        }}
+                      />
+                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

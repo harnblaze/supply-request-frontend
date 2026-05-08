@@ -18,7 +18,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
           <div className="flex items-center gap-3">
-            <div className="text-sm font-semibold tracking-tight">Supply Request</div>
+            <div className="text-sm font-semibold tracking-tight">Управление заявками</div>
             <nav className="hidden items-center gap-1 sm:flex" aria-label="Основная навигация">
               <NavLink to="/" className={getNavLinkClassName} end>
                 Заявки
@@ -29,7 +29,10 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
             </nav>
           </div>
 
-          <nav className="flex items-center gap-1 sm:hidden" aria-label="Основная навигация (мобильная)">
+          <nav
+            className="flex items-center gap-1 sm:hidden"
+            aria-label="Основная навигация (мобильная)"
+          >
             <NavLink to="/" className={getNavLinkClassName} end>
               Заявки
             </NavLink>
@@ -44,4 +47,3 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
     </div>
   )
 }
-
