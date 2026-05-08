@@ -18,6 +18,9 @@ interface FetchOptions {
 interface QueryCacheState {
   entries: Record<string, QueryCacheEntry>
   fetch: <TData>(key: string, fetcher: () => Promise<TData>, options?: FetchOptions) => Promise<TData>
+  getEntry: <TData>(key: string) => QueryCacheEntry<TData> | undefined
+  setData: <TData>(key: string, data: TData) => void
+  updateData: <TData>(key: string, updater: (prev: TData | undefined) => TData) => void
   invalidateKey: (key: string) => void
   invalidatePrefix: (prefix: string) => void
   clear: () => void
@@ -96,6 +99,40 @@ export const useQueryCacheStore = create<QueryCacheState>()((set, get) => ({
       throw error
     }
   },
+
+  getEntry: <TData,>(key: string) => get().entries[key] as QueryCacheEntry<TData> | undefined,
+
+  setData: <TData,>(key: string, data: TData) =>
+    set((state) => ({
+      entries: {
+        ...state.entries,
+        [key]: {
+          status: 'success',
+          data,
+          error: undefined,
+          updatedAt: now(),
+          inflight: undefined,
+        },
+      },
+    })),
+
+  updateData: <TData,>(key: string, updater: (prev: TData | undefined) => TData) =>
+    set((state) => {
+      const prevEntry = state.entries[key] as QueryCacheEntry<TData> | undefined
+      const nextData = updater(prevEntry?.data)
+      return {
+        entries: {
+          ...state.entries,
+          [key]: {
+            status: 'success',
+            data: nextData,
+            error: undefined,
+            updatedAt: now(),
+            inflight: undefined,
+          },
+        },
+      }
+    }),
 
   invalidateKey: (key: string) =>
     set((state) => {

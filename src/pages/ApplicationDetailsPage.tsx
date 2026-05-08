@@ -15,6 +15,7 @@ import type { Material } from '@/entities/material'
 import { deliveryStatusLabelRu, deliveryStatusRowClassName } from '@/entities/material'
 import { AddMaterialDialog, EditDeliveredQuantityDialog } from '@/features/material-management'
 import {
+  applyOptimisticInvoicesUpdate,
   invalidateApplicationAggregate,
   useApplication,
   useInvoices,
@@ -145,7 +146,14 @@ export const ApplicationDetailsPage = () => {
 
           const handleSelectForPayment = async () => {
             if (isBusy) return
+            const previous = invoices
             setInvoiceActionId(row.original.id)
+            applyOptimisticInvoicesUpdate(id, (prev) => {
+              const list = prev ?? previous
+              return list.map((invoice) =>
+                invoice.id === row.original.id ? { ...invoice, status: 'SELECTED_FOR_PAYMENT' } : invoice,
+              )
+            })
             try {
               await invoicesApi.selectForPayment(row.original.id)
               toastSuccess('Счет выбран для оплаты')
@@ -155,6 +163,7 @@ export const ApplicationDetailsPage = () => {
                 refetchApplication({ force: true }),
               ])
             } catch (e) {
+              applyOptimisticInvoicesUpdate(id, () => previous)
               toastApiError(e, { title: 'Не удалось выбрать счет для оплаты' })
             } finally {
               setInvoiceActionId(null)
@@ -165,7 +174,15 @@ export const ApplicationDetailsPage = () => {
             if (isBusy) return
             const confirmed = window.confirm('Отметить счет как оплаченный? Это действие нельзя отменить.')
             if (!confirmed) return
+            const previous = invoices
             setInvoiceActionId(row.original.id)
+            applyOptimisticInvoicesUpdate(id, (prev) => {
+              const list = prev ?? previous
+              const nowIso = new Date().toISOString()
+              return list.map((invoice) =>
+                invoice.id === row.original.id ? { ...invoice, status: 'PAID', paidAt: nowIso } : invoice,
+              )
+            })
             try {
               await invoicesApi.markPaid(row.original.id)
               toastSuccess('Счет отмечен как оплаченный')
@@ -175,6 +192,7 @@ export const ApplicationDetailsPage = () => {
                 refetchApplication({ force: true }),
               ])
             } catch (e) {
+              applyOptimisticInvoicesUpdate(id, () => previous)
               toastApiError(e, { title: 'Не удалось отметить счет как оплаченный' })
             } finally {
               setInvoiceActionId(null)
@@ -271,7 +289,7 @@ export const ApplicationDetailsPage = () => {
         },
       },
     ],
-    [id, invoiceActionId, refetchApplication, refetchInvoices],
+    [id, invoiceActionId, invoices, refetchApplication, refetchInvoices],
   )
 
   const invoicesTable = useReactTable({

@@ -8,6 +8,8 @@ export { invoicesApi } from './invoicesApi'
 export { materialsApi } from './materialsApi'
 
 export {
+  applyOptimisticInvoicesUpdate,
+  applyOptimisticMaterialsByApplicationUpdate,
   invalidateApplication,
   invalidateApplicationAggregate,
   invalidateApplicationsList,

@@ -181,6 +181,20 @@ const keyInvoicesByApplication = (applicationId: string) => `applications:${appl
 const keyMaterialsByApplication = (applicationId: string) => `applications:${applicationId}:materials`
 const keyMaterialsSearch = (query?: MaterialsListQuery) => `materials:list?${stableStringify(query ?? {})}`
 
+export const applyOptimisticInvoicesUpdate = (
+  applicationId: string,
+  updater: (prev: Invoice[] | undefined) => Invoice[],
+) => {
+  useQueryCacheStore.getState().updateData(keyInvoicesByApplication(applicationId), updater)
+}
+
+export const applyOptimisticMaterialsByApplicationUpdate = (
+  applicationId: string,
+  updater: (prev: Material[] | undefined) => Material[],
+) => {
+  useQueryCacheStore.getState().updateData(keyMaterialsByApplication(applicationId), updater)
+}
+
 export const invalidateApplicationsList = () =>
   useQueryCacheStore.getState().invalidatePrefix('applications:list?')
 
