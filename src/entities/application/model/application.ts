@@ -5,5 +5,7 @@ export interface Application {
   applicationNumber?: string | null
   createdAt?: string | null
   status: ApplicationStatus
+  comment?: string | null
+  wordFile?: string | null
 }
 
