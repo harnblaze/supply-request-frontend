@@ -12,6 +12,9 @@ import { applicationStatusLabelRu } from '@/entities/application'
 import type { Invoice, InvoiceStatus } from '@/entities/invoice'
 import { invoiceStatusLabelRu, invoiceStatusRowClassName } from '@/entities/invoice'
 import { AddInvoiceDialog, EditInvoiceDialog } from '@/features/invoice-management'
+import type { Material } from '@/entities/material'
+import { deliveryStatusLabelRu, deliveryStatusRowClassName } from '@/entities/material'
+import { AddMaterialDialog, EditDeliveredQuantityDialog } from '@/features/material-management'
 import { applicationsApi } from '@/shared/api'
 import { invoicesApi } from '@/shared/api'
 import { API_BASE_URL, UPLOADS_BASE_URL } from '@/config'
@@ -29,6 +32,11 @@ export const ApplicationDetailsPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
 
+  const tabStorageKey = useMemo(() => (id ? `application-details-tab:${id}` : null), [id])
+  const [activeTab, setActiveTab] = useState<'invoices' | 'materials'>(() => {
+    return 'invoices'
+  })
+
   const [application, setApplication] = useState<Application | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<unknown>(null)
@@ -41,12 +49,42 @@ export const ApplicationDetailsPage = () => {
   const [invoicesReloadToken, setInvoicesReloadToken] = useState(0)
   const [invoiceActionId, setInvoiceActionId] = useState<string | null>(null)
 
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [isMaterialsLoading, setIsMaterialsLoading] = useState(false)
+  const [materialsError, setMaterialsError] = useState<unknown>(null)
+  const [materialsReloadToken, setMaterialsReloadToken] = useState(0)
+
+  useEffect(() => {
+    if (!tabStorageKey) return
+    try {
+      const stored = sessionStorage.getItem(tabStorageKey)
+      if (stored === 'invoices' || stored === 'materials') {
+        setActiveTab(stored)
+      }
+    } catch {
+      // ignore
+    }
+  }, [tabStorageKey])
+
+  useEffect(() => {
+    if (!tabStorageKey) return
+    try {
+      sessionStorage.setItem(tabStorageKey, activeTab)
+    } catch {
+      // ignore
+    }
+  }, [activeTab, tabStorageKey])
+
   const refetch = useCallback(() => {
     setReloadToken((v) => v + 1)
   }, [])
 
   const refetchInvoices = useCallback(() => {
     setInvoicesReloadToken((v) => v + 1)
+  }, [])
+
+  const refetchMaterials = useCallback(() => {
+    setMaterialsReloadToken((v) => v + 1)
   }, [])
 
   useEffect(() => {
@@ -107,6 +145,35 @@ export const ApplicationDetailsPage = () => {
       isCancelled = true
     }
   }, [id, invoicesReloadToken])
+
+  useEffect(() => {
+    if (!id) return
+    let isCancelled = false
+
+    const loadMaterials = async () => {
+      setIsMaterialsLoading(true)
+      setMaterialsError(null)
+
+      try {
+        const response = await applicationsApi.listMaterials<unknown>(id)
+        const normalized = normalizeMaterialsListResponse(response)
+        if (isCancelled) return
+        setMaterials(normalized)
+      } catch (e) {
+        if (isCancelled) return
+        setMaterialsError(e)
+        toastApiError(e, { title: 'Не удалось загрузить материалы' })
+      } finally {
+        if (!isCancelled) setIsMaterialsLoading(false)
+      }
+    }
+
+    void loadMaterials()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [id, materialsReloadToken])
 
   const wordFileHref = useMemo(() => resolveWordFileHref(application?.wordFile ?? null), [
     application?.wordFile,
@@ -233,6 +300,58 @@ export const ApplicationDetailsPage = () => {
   const invoicesTable = useReactTable({
     data: invoices,
     columns,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
+  const materialsColumns = useMemo<ColumnDef<Material>[]>(
+    () => [
+      {
+        header: 'Наименование',
+        accessorKey: 'name',
+        cell: ({ row }) => (row.original.name.trim().length > 0 ? row.original.name : '—'),
+      },
+      {
+        header: 'Заказано',
+        accessorKey: 'orderedQuantity',
+        cell: ({ row }) => row.original.orderedQuantity,
+      },
+      {
+        header: 'Поставлено',
+        accessorKey: 'deliveredQuantity',
+        cell: ({ row }) => row.original.deliveredQuantity,
+      },
+      {
+        header: 'Статус поставки',
+        accessorKey: 'deliveryStatus',
+        cell: ({ row }) => deliveryStatusLabelRu[row.original.deliveryStatus],
+      },
+      {
+        header: 'Дата поставки',
+        accessorKey: 'deliveredAt',
+        cell: ({ row }) => formatDateTimeRu(row.original.deliveredAt ?? null),
+      },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <EditDeliveredQuantityDialog
+              material={row.original}
+              onUpdated={() => {
+                refetchMaterials()
+                refetch()
+              }}
+            />
+          </div>
+        ),
+      },
+    ],
+    [refetch, refetchMaterials],
+  )
+
+  const materialsTable = useReactTable({
+    data: materials,
+    columns: materialsColumns,
     getCoreRowModel: getCoreRowModel(),
   })
 
@@ -402,7 +521,7 @@ export const ApplicationDetailsPage = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="invoices">
+      <Tabs value={activeTab} onValueChange={(next) => setActiveTab(next as 'invoices' | 'materials')}>
         <TabsList>
           <TabsTrigger value="invoices">Счета</TabsTrigger>
           <TabsTrigger value="materials">Материалы</TabsTrigger>
@@ -480,11 +599,78 @@ export const ApplicationDetailsPage = () => {
           </div>
         </TabsContent>
         <TabsContent value="materials" className="mt-4">
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-sm text-muted-foreground">
-              Таблица материалов будет добавлена в шаге 8. После изменений количества поставки тут будет
-              вызываться refetch заявки и списка материалов.
-            </p>
+          <div className="space-y-3 rounded-lg border bg-card p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">Материалы</p>
+                <p className="text-sm text-muted-foreground">
+                  Сервер рассчитывает статус поставки и может менять статус заявки — после действий мы рефетчим.
+                </p>
+              </div>
+              <AddMaterialDialog
+                applicationId={id}
+                onCreated={() => {
+                  refetchMaterials()
+                  refetch()
+                }}
+              />
+            </div>
+
+            {isMaterialsLoading ? (
+              <TableSkeleton rows={6} columns={6} />
+            ) : materialsError ? (
+              <EmptyState
+                title="Не удалось загрузить материалы"
+                description="Проверь API и попробуй ещё раз."
+                action={
+                  <Button type="button" onClick={refetchMaterials}>
+                    Перезагрузить
+                  </Button>
+                }
+              />
+            ) : materials.length === 0 ? (
+              <EmptyState
+                title="Материалов пока нет"
+                description="Добавь первый материал, чтобы начать отслеживать поставку."
+                action={
+                  <Button type="button" variant="secondary" onClick={refetchMaterials}>
+                    Обновить
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    {materialsTable.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id}>
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {materialsTable.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className={deliveryStatusRowClassName[row.original.deliveryStatus]}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
@@ -595,5 +781,61 @@ const resolveInvoicePdfHref = (pdfFile: string | null) => {
   }
 
   return `${UPLOADS_BASE_URL}/${trimmed.replace(/^\/+/, '')}`
+}
+
+const normalizeMaterialsListResponse = (response: unknown): Material[] => {
+  if (Array.isArray(response)) {
+    return response.map(normalizeMaterial).filter((v): v is Material => Boolean(v))
+  }
+
+  if (isRecord(response)) {
+    const maybeItems = response.items
+    if (Array.isArray(maybeItems)) {
+      return maybeItems.map(normalizeMaterial).filter((v): v is Material => Boolean(v))
+    }
+  }
+
+  return []
+}
+
+const normalizeMaterial = (value: unknown): Material | null => {
+  if (!isRecord(value)) return null
+
+  const id = value.id
+  const deliveryStatus = value.deliveryStatus
+
+  if (typeof id !== 'string') return null
+  if (typeof deliveryStatus !== 'string') return null
+
+  const name = typeof value.name === 'string' ? value.name : ''
+  const orderedQuantity =
+    typeof value.orderedQuantity === 'number'
+      ? value.orderedQuantity
+      : typeof value.orderedQuantity === 'string'
+        ? Number(value.orderedQuantity)
+        : 0
+  const deliveredQuantity =
+    typeof value.deliveredQuantity === 'number'
+      ? value.deliveredQuantity
+      : typeof value.deliveredQuantity === 'string'
+        ? Number(value.deliveredQuantity)
+        : 0
+
+  const deliveredAt = asStringOrNull(
+    isRecord(value)
+      ? (value.deliveredAt ?? value.deliveredDate ?? value.deliveryDate ?? value.deliveredOn ?? null)
+      : null,
+  )
+
+  return {
+    id,
+    deliveryStatus: deliveryStatus as Material['deliveryStatus'],
+    name,
+    orderedQuantity: Number.isFinite(orderedQuantity) ? orderedQuantity : 0,
+    deliveredQuantity: Number.isFinite(deliveredQuantity) ? deliveredQuantity : 0,
+    applicationId: asStringOrNull(value.applicationId),
+    deliveredAt,
+    createdAt: asStringOrNull(value.createdAt),
+  }
 }
 
