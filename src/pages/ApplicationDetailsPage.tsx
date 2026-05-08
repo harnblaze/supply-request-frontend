@@ -17,8 +17,7 @@ import { deliveryStatusLabelRu, deliveryStatusRowClassName } from '@/entities/ma
 import { AddMaterialDialog, EditDeliveredQuantityDialog } from '@/features/material-management'
 import { applicationsApi } from '@/shared/api'
 import { invoicesApi } from '@/shared/api'
-import { API_BASE_URL, UPLOADS_BASE_URL } from '@/config'
-import { formatCurrencyRub, formatDateTimeRu, toastApiError, toastSuccess } from '@/shared/lib'
+import { formatCurrencyRub, formatDateTimeRu, resolveFileHref, toastApiError, toastSuccess } from '@/shared/lib'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { EmptyState } from '@/shared/ui/emptyState'
@@ -175,9 +174,7 @@ export const ApplicationDetailsPage = () => {
     }
   }, [id, materialsReloadToken])
 
-  const wordFileHref = useMemo(() => resolveWordFileHref(application?.wordFile ?? null), [
-    application?.wordFile,
-  ])
+  const wordFileHref = useMemo(() => resolveFileHref(application?.wordFile ?? null), [application?.wordFile])
 
   const columns = useMemo<ColumnDef<Invoice>[]>(
     () => [
@@ -205,7 +202,7 @@ export const ApplicationDetailsPage = () => {
         id: 'pdf',
         header: 'PDF',
         cell: ({ row }) => {
-          const href = resolveInvoicePdfHref(row.original.pdfFile ?? null)
+          const href = resolveFileHref(row.original.pdfFile ?? null)
           if (!href) return '—'
           return (
             <a
@@ -496,7 +493,7 @@ export const ApplicationDetailsPage = () => {
       <div className="space-y-3 rounded-lg border bg-card p-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <p className="text-sm font-medium">Комментарий</p>
+            <p className="text-sm font-medium">Описание заявки</p>
             <p className="whitespace-pre-wrap text-sm text-muted-foreground">
               {application.comment && application.comment.trim().length > 0 ? application.comment : '—'}
             </p>
@@ -715,20 +712,6 @@ const normalizeApplicationDetailsResponse = (response: unknown): Application | n
   }
 }
 
-const resolveWordFileHref = (wordFile: string | null) => {
-  if (!wordFile) return null
-  const trimmed = wordFile.trim()
-  if (trimmed.length === 0) return null
-  if (/^https?:\/\//i.test(trimmed)) return trimmed
-
-  if (trimmed.startsWith('/')) {
-    // Часто сервер возвращает абсолютный путь вида "/uploads/..."
-    return `${API_BASE_URL}${trimmed}`
-  }
-
-  return `${UPLOADS_BASE_URL}/${trimmed.replace(/^\/+/, '')}`
-}
-
 const normalizeInvoicesListResponse = (response: unknown): Invoice[] => {
   if (Array.isArray(response)) {
     return response.map(normalizeInvoice).filter((v): v is Invoice => Boolean(v))
@@ -768,19 +751,6 @@ const normalizeInvoice = (value: unknown): Invoice | null => {
     pdfFile,
     createdAt: asStringOrNull(value.createdAt),
   }
-}
-
-const resolveInvoicePdfHref = (pdfFile: string | null) => {
-  if (!pdfFile) return null
-  const trimmed = pdfFile.trim()
-  if (trimmed.length === 0) return null
-  if (/^https?:\/\//i.test(trimmed)) return trimmed
-
-  if (trimmed.startsWith('/')) {
-    return `${API_BASE_URL}${trimmed}`
-  }
-
-  return `${UPLOADS_BASE_URL}/${trimmed.replace(/^\/+/, '')}`
 }
 
 const normalizeMaterialsListResponse = (response: unknown): Material[] => {

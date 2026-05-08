@@ -113,6 +113,20 @@ export const ApplicationsListPage = () => {
         cell: ({ row }) => formatDateTimeRu(row.original.createdAt ?? null),
       },
       {
+        header: 'Описание заявки',
+        accessorKey: 'comment',
+        cell: ({ row }) => {
+          const value = row.original.comment
+          const normalized = typeof value === 'string' ? value.trim() : ''
+          if (normalized.length === 0) return '—'
+          return (
+            <span className="block max-w-[520px] truncate text-sm" title={normalized}>
+              {normalized}
+            </span>
+          )
+        },
+      },
+      {
         header: 'Статус',
         accessorKey: 'status',
         cell: ({ row }) => applicationStatusLabelRu[row.original.status],
@@ -202,7 +216,7 @@ export const ApplicationsListPage = () => {
       </div>
 
       {isLoading ? (
-        <TableSkeleton rows={8} columns={4} />
+        <TableSkeleton rows={8} columns={5} />
       ) : error ? (
         <EmptyState
           title="Не удалось загрузить список"
@@ -295,6 +309,7 @@ const normalizeApplication = (value: unknown): Application | null => {
     status: status as ApplicationStatus,
     applicationNumber: asStringOrNull(value.applicationNumber),
     createdAt: asStringOrNull(value.createdAt),
+    comment: asStringOrNull(value.comment),
   }
 }
 

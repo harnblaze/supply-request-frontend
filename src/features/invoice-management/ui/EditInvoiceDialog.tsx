@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
@@ -23,11 +23,13 @@ export const EditInvoiceDialog = ({
   onUpdated,
 }: EditInvoiceDialogProps) => {
   const [isOpen, setIsOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const defaultValues = useMemo<EditInvoiceFormValues>(
     () => ({
       supplier: invoice.supplier ?? '',
       amount: invoice.amount ?? '',
+      pdfFile: null,
     }),
     [invoice.amount, invoice.supplier],
   )
@@ -36,6 +38,7 @@ export const EditInvoiceDialog = ({
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    setValue,
     reset,
   } = useForm<EditInvoiceFormValues>({
     resolver: zodResolver(editInvoiceSchema),
@@ -78,6 +81,11 @@ export const EditInvoiceDialog = ({
                 supplier: values.supplier,
                 amount: values.amount,
               })
+
+              if (values.pdfFile) {
+                await invoicesApi.uploadPdfFile(invoice.id, values.pdfFile)
+              }
+
               toastSuccess('Счет обновлён')
               setIsOpen(false)
               onUpdated?.()
@@ -119,6 +127,31 @@ export const EditInvoiceDialog = ({
             ) : (
               <p className="text-sm text-muted-foreground">
                 Поддерживается точка или запятая, максимум 2 знака после точки.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium" htmlFor={`editInvoicePdf-${invoice.id}`}>
+              PDF (загрузить/заменить)
+            </label>
+            <Input
+              id={`editInvoicePdf-${invoice.id}`}
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              aria-label="Загрузить PDF счета"
+              disabled={isUiDisabled}
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null
+                setValue('pdfFile', file, { shouldValidate: true })
+              }}
+            />
+            {errors.pdfFile?.message ? (
+              <p className="text-sm text-destructive">{String(errors.pdfFile.message)}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Если не выбрать файл, PDF не изменится.
               </p>
             )}
           </div>

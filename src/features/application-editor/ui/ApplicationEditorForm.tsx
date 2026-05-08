@@ -104,12 +104,12 @@ export const ApplicationEditorForm = ({
 
         <div className="space-y-2">
           <label className="block text-sm font-medium" htmlFor="comment">
-            Комментарий
+            Описание заявки
           </label>
           <Textarea
             id="comment"
             placeholder="Например: срочная закупка, срок до пятницы…"
-            aria-label="Комментарий"
+            aria-label="Описание заявки"
             rows={5}
             {...register('comment')}
           />

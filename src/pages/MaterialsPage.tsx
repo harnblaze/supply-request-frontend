@@ -236,7 +236,7 @@ export const MaterialsPage = () => {
       </div>
 
       {isLoading ? (
-        <TableSkeleton columnsCount={5} rowsCount={8} />
+        <TableSkeleton columns={5} rows={8} />
       ) : error ? (
         <EmptyState
           title="Не удалось загрузить материалы"
