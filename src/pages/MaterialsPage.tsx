@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   type ColumnDef,
@@ -13,9 +13,18 @@ import {
   deliveryStatusRowClassName,
   deliveryStatusSelectOptions,
 } from '@/entities/material'
-import { materialsApi } from '@/shared/api'
-import { formatDateTimeRu, toastApiError, useDebouncedValue } from '@/shared/lib'
+import { useMaterialsSearch } from '@/shared/api'
+import { formatDateTimeRu, useDebouncedValue } from '@/shared/lib'
 import { Button } from '@/shared/ui/button'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/shared/ui/drawer'
 import { EmptyState } from '@/shared/ui/emptyState'
 import { Input } from '@/shared/ui/input'
 import {
@@ -27,6 +36,7 @@ import {
 } from '@/shared/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { TableSkeleton } from '@/shared/ui/tableSkeleton'
+import { FilterIcon } from 'lucide-react'
 
 type MaterialsListItem = Material & {
   applicationNumber?: string | null
@@ -41,49 +51,18 @@ export const MaterialsPage = () => {
   const [applicationNumberQuery, setApplicationNumberQuery] = useState('')
   const [deliveryStatusFilter, setDeliveryStatusFilter] =
     useState<DeliveryStatusFilter>('NOT_DELIVERED_OR_PARTIALLY')
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
 
   const debouncedNameQuery = useDebouncedValue(nameQuery, 350)
   const debouncedApplicationNumberQuery = useDebouncedValue(applicationNumberQuery, 350)
 
-  const [materials, setMaterials] = useState<MaterialsListItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<unknown>(null)
-
-  useEffect(() => {
-    let isCancelled = false
-
-    const load = async () => {
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        const response = await materialsApi.list<unknown>({
-          name: debouncedNameQuery.trim().length > 0 ? debouncedNameQuery.trim() : undefined,
-          applicationNumber:
-            debouncedApplicationNumberQuery.trim().length > 0
-              ? debouncedApplicationNumberQuery.trim()
-              : undefined,
-        })
-
-        const list = normalizeMaterialsListResponse(response)
-
-        if (isCancelled) return
-        setMaterials(list)
-      } catch (e) {
-        if (isCancelled) return
-        setError(e)
-        toastApiError(e, { title: 'Не удалось загрузить материалы' })
-      } finally {
-        if (!isCancelled) setIsLoading(false)
-      }
-    }
-
-    void load()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [debouncedApplicationNumberQuery, debouncedNameQuery])
+  const { data: materials = [], error, isLoading } = useMaterialsSearch({
+    name: debouncedNameQuery.trim().length > 0 ? debouncedNameQuery.trim() : undefined,
+    applicationNumber:
+      debouncedApplicationNumberQuery.trim().length > 0
+        ? debouncedApplicationNumberQuery.trim()
+        : undefined,
+  })
 
   const columns = useMemo<ColumnDef<MaterialsListItem>[]>(
     () => [
@@ -164,6 +143,65 @@ export const MaterialsPage = () => {
     return deliveryStatusLabelRu[deliveryStatusFilter]
   }, [deliveryStatusFilter])
 
+  const handleResetFilters = () => {
+    setNameQuery('')
+    setApplicationNumberQuery('')
+    setDeliveryStatusFilter('NOT_DELIVERED_OR_PARTIALLY')
+  }
+
+  const nameField = (
+    <div className="w-full sm:max-w-sm">
+      <label className="mb-1 block text-sm font-medium" htmlFor="material-name">
+        Наименование
+      </label>
+      <Input
+        id="material-name"
+        value={nameQuery}
+        onChange={(e) => setNameQuery(e.target.value)}
+        placeholder="Например: кабель"
+        aria-label="Поиск по наименованию материала"
+      />
+    </div>
+  )
+
+  const applicationNumberField = (
+    <div className="w-full sm:max-w-sm">
+      <label className="mb-1 block text-sm font-medium" htmlFor="material-application-number">
+        Номер заявки
+      </label>
+      <Input
+        id="material-application-number"
+        value={applicationNumberQuery}
+        onChange={(e) => setApplicationNumberQuery(e.target.value)}
+        placeholder="Например: Z-2026-000123"
+        aria-label="Поиск по номеру заявки"
+      />
+    </div>
+  )
+
+  const deliveryStatusField = (
+    <div className="w-full sm:max-w-sm">
+      <span className="mb-1 block text-sm font-medium">Статус поставки</span>
+      <Select
+        value={deliveryStatusFilter}
+        onValueChange={(v) => setDeliveryStatusFilter((v as DeliveryStatusFilter) || '')}
+      >
+        <SelectTrigger className="w-full" aria-label="Фильтр по статусу поставки">
+          <SelectValue placeholder="Все статусы">{selectedDeliveryStatusLabel}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">Все статусы</SelectItem>
+          <SelectItem value="NOT_DELIVERED_OR_PARTIALLY">Не дошли</SelectItem>
+          {deliveryStatusSelectOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+
   return (
     <section className="space-y-4">
       <div>
@@ -171,67 +209,58 @@ export const MaterialsPage = () => {
         <p className="text-sm text-muted-foreground">Глобальный поиск/список материалов.</p>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-end">
-        <div className="w-full sm:max-w-sm">
-          <label className="mb-1 block text-sm font-medium" htmlFor="material-name">
-            Наименование
-          </label>
-          <Input
-            id="material-name"
-            value={nameQuery}
-            onChange={(e) => setNameQuery(e.target.value)}
-            placeholder="Например: кабель"
-            aria-label="Поиск по наименованию материала"
-          />
-        </div>
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-center justify-between gap-2 sm:hidden">
+          <Drawer open={isMobileFiltersOpen} onOpenChange={(next) => setIsMobileFiltersOpen(next)}>
+            <DrawerTrigger asChild>
+              <Button type="button" variant="secondary" aria-label="Открыть фильтры">
+                <FilterIcon className="mr-2" />
+                Фильтры
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent className="px-4 pb-2">
+              <DrawerHeader>
+                <DrawerTitle>Фильтры</DrawerTitle>
+              </DrawerHeader>
+              <div className="space-y-3">
+                {nameField}
+                {applicationNumberField}
+                {deliveryStatusField}
+              </div>
+              <DrawerFooter>
+                <DrawerClose asChild>
+                  <Button type="button" aria-label="Закрыть фильтры">
+                    Применить
+                  </Button>
+                </DrawerClose>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleResetFilters}
+                  aria-label="Сбросить фильтры"
+                >
+                  Сбросить
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
 
-        <div className="w-full sm:max-w-sm">
-          <label className="mb-1 block text-sm font-medium" htmlFor="material-application-number">
-            Номер заявки
-          </label>
-          <Input
-            id="material-application-number"
-            value={applicationNumberQuery}
-            onChange={(e) => setApplicationNumberQuery(e.target.value)}
-            placeholder="Например: Z-2026-000123"
-            aria-label="Поиск по номеру заявки"
-          />
-        </div>
-
-        <div className="w-full sm:max-w-sm">
-          <span className="mb-1 block text-sm font-medium">Статус поставки</span>
-          <Select
-            value={deliveryStatusFilter}
-            onValueChange={(v) => setDeliveryStatusFilter((v as DeliveryStatusFilter) || '')}
-          >
-            <SelectTrigger className="w-full" aria-label="Фильтр по статусу поставки">
-              <SelectValue placeholder="Все статусы">{selectedDeliveryStatusLabel}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Все статусы</SelectItem>
-              <SelectItem value="NOT_DELIVERED_OR_PARTIALLY">Не дошли</SelectItem>
-              {deliveryStatusSelectOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex w-full justify-end sm:ml-auto sm:w-auto">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setNameQuery('')
-              setApplicationNumberQuery('')
-              setDeliveryStatusFilter('NOT_DELIVERED_OR_PARTIALLY')
-            }}
-            aria-label="Сбросить фильтры"
-          >
+          <Button type="button" variant="ghost" onClick={handleResetFilters} aria-label="Сбросить фильтры">
             Сбросить
           </Button>
+        </div>
+
+        <div className="hidden gap-3 sm:flex sm:items-end">
+          <div className="flex flex-1 flex-wrap gap-3">
+            {nameField}
+            {applicationNumberField}
+            {deliveryStatusField}
+          </div>
+          <div className="flex w-full justify-end sm:ml-auto sm:w-auto">
+            <Button type="button" variant="ghost" onClick={handleResetFilters} aria-label="Сбросить фильтры">
+              Сбросить
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -247,7 +276,7 @@ export const MaterialsPage = () => {
       ) : (
         <div className="rounded-lg border bg-card">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-card [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-card">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
@@ -280,70 +309,4 @@ export const MaterialsPage = () => {
     </section>
   )
 }
-
-const normalizeMaterialsListResponse = (response: unknown): MaterialsListItem[] => {
-  if (Array.isArray(response)) {
-    return response.map(normalizeMaterialListItem).filter((v): v is MaterialsListItem => Boolean(v))
-  }
-
-  if (isRecord(response)) {
-    const maybeItems = response.items
-    if (Array.isArray(maybeItems)) {
-      return maybeItems
-        .map(normalizeMaterialListItem)
-        .filter((v): v is MaterialsListItem => Boolean(v))
-    }
-  }
-
-  return []
-}
-
-const normalizeMaterialListItem = (value: unknown): MaterialsListItem | null => {
-  if (!isRecord(value)) return null
-
-  const id = value.id
-  const deliveryStatus = value.deliveryStatus
-  if (typeof id !== 'string') return null
-  if (typeof deliveryStatus !== 'string') return null
-
-  const name = typeof value.name === 'string' ? value.name : ''
-  const orderedQuantity =
-    typeof value.orderedQuantity === 'number'
-      ? value.orderedQuantity
-      : typeof value.orderedQuantity === 'string'
-        ? Number(value.orderedQuantity)
-        : 0
-  const deliveredQuantity =
-    typeof value.deliveredQuantity === 'number'
-      ? value.deliveredQuantity
-      : typeof value.deliveredQuantity === 'string'
-        ? Number(value.deliveredQuantity)
-        : 0
-
-  const deliveredAt = asStringOrNull(
-    value.deliveredAt ?? value.deliveredDate ?? value.deliveryDate ?? value.deliveredOn ?? null,
-  )
-
-  const applicationId = asStringOrNull(value.applicationId ?? value.application?.id ?? null)
-  const applicationNumber = asStringOrNull(
-    value.applicationNumber ?? value.application?.applicationNumber ?? null,
-  )
-
-  return {
-    id,
-    deliveryStatus: deliveryStatus as Material['deliveryStatus'],
-    name,
-    orderedQuantity: Number.isFinite(orderedQuantity) ? orderedQuantity : 0,
-    deliveredQuantity: Number.isFinite(deliveredQuantity) ? deliveredQuantity : 0,
-    applicationId,
-    deliveredAt,
-    createdAt: asStringOrNull(value.createdAt),
-    applicationNumber,
-  }
-}
-
-const isRecord = (value: unknown): value is Record<string, any> =>
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-
-const asStringOrNull = (value: unknown) => (typeof value === 'string' ? value : null)
 

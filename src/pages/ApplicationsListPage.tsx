@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   type ColumnDef,
@@ -14,9 +14,24 @@ import {
   applicationStatusRowClassName,
   applicationStatusSelectOptions,
 } from '@/entities/application'
-import { applicationsApi } from '@/shared/api'
-import { formatDateTimeRu, toastApiError, useDebouncedValue } from '@/shared/lib'
+import { useApplicationsList } from '@/shared/api'
+import { formatDateTimeRu, useDebouncedValue } from '@/shared/lib'
 import { Button } from '@/shared/ui/button'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/shared/ui/drawer'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu'
 import { EmptyState } from '@/shared/ui/emptyState'
 import { Input } from '@/shared/ui/input'
 import {
@@ -28,22 +43,37 @@ import {
 } from '@/shared/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { TableSkeleton } from '@/shared/ui/tableSkeleton'
+import { FilterIcon, MoreHorizontalIcon } from 'lucide-react'
 
 export const ApplicationsListPage = () => {
   const navigate = useNavigate()
 
   const [applicationNumberQuery, setApplicationNumberQuery] = useState('')
   const [status, setStatus] = useState<ApplicationStatus | ''>('')
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
 
   const debouncedApplicationNumberQuery = useDebouncedValue(applicationNumberQuery, 350)
   const debouncedStatus = useDebouncedValue(status, 350)
 
-  const [applications, setApplications] = useState<Application[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<unknown>(null)
-  const [reloadToken, setReloadToken] = useState(0)
+  const {
+    data: applications = [],
+    error,
+    isLoading,
+    refetch,
+  } = useApplicationsList({
+    applicationNumber:
+      debouncedApplicationNumberQuery.trim().length > 0
+        ? debouncedApplicationNumberQuery.trim()
+        : undefined,
+    status: debouncedStatus || undefined,
+  })
 
   const selectedStatusLabel = status ? applicationStatusLabelRu[status] : undefined
+
+  const handleResetFilters = () => {
+    setApplicationNumberQuery('')
+    setStatus('')
+  }
 
   const handleCreateClick = () => {
     navigate('/applications/new')
@@ -55,47 +85,6 @@ export const ApplicationsListPage = () => {
     },
     [navigate],
   )
-
-  useEffect(() => {
-    let isCancelled = false
-
-    const load = async () => {
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        const response = await applicationsApi.list<unknown>({
-          applicationNumber:
-            debouncedApplicationNumberQuery.trim().length > 0
-              ? debouncedApplicationNumberQuery.trim()
-              : undefined,
-          status: debouncedStatus || undefined,
-        })
-
-        const list = normalizeApplicationsListResponse(response)
-        const sorted = [...list].sort((a, b) => {
-          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
-          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
-          return bTime - aTime
-        })
-
-        if (isCancelled) return
-        setApplications(sorted)
-      } catch (e) {
-        if (isCancelled) return
-        setError(e)
-        toastApiError(e, { title: 'Не удалось загрузить заявки' })
-      } finally {
-        if (!isCancelled) setIsLoading(false)
-      }
-    }
-
-    void load()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [debouncedApplicationNumberQuery, debouncedStatus, reloadToken])
 
   const columns = useMemo<ColumnDef<Application>[]>(
     () => [
@@ -136,14 +125,46 @@ export const ApplicationsListPage = () => {
         header: '',
         cell: ({ row }) => (
           <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => handleRowOpen(row.original.id)}
-            >
-              Открыть
-            </Button>
+            <div className="hidden sm:block">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleRowOpen(row.original.id)
+                }}
+              >
+                Открыть
+              </Button>
+            </div>
+            <div className="sm:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Действия по заявке"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  }
+                >
+                  <MoreHorizontalIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRowOpen(row.original.id)
+                    }}
+                  >
+                    Открыть
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         ),
       },
@@ -157,6 +178,40 @@ export const ApplicationsListPage = () => {
     getCoreRowModel: getCoreRowModel(),
   })
 
+  const applicationNumberField = (
+    <div className="w-full sm:max-w-sm">
+      <label className="mb-1 block text-sm font-medium" htmlFor="application-number">
+        Номер заявки
+      </label>
+      <Input
+        id="application-number"
+        value={applicationNumberQuery}
+        onChange={(e) => setApplicationNumberQuery(e.target.value)}
+        placeholder="Например: Z-2026-000123"
+        aria-label="Поиск по номеру заявки"
+      />
+    </div>
+  )
+
+  const statusField = (
+    <div className="w-full sm:max-w-sm">
+      <span className="mb-1 block text-sm font-medium">Статус</span>
+      <Select value={status} onValueChange={(v) => setStatus((v as ApplicationStatus) || '')}>
+        <SelectTrigger className="w-full" aria-label="Фильтр по статусу">
+          <SelectValue placeholder="Все статусы">{selectedStatusLabel}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">Все статусы</SelectItem>
+          {applicationStatusSelectOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -169,49 +224,56 @@ export const ApplicationsListPage = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-end">
-        <div className="w-full sm:max-w-sm">
-          <label className="mb-1 block text-sm font-medium" htmlFor="application-number">
-            Номер заявки
-          </label>
-          <Input
-            id="application-number"
-            value={applicationNumberQuery}
-            onChange={(e) => setApplicationNumberQuery(e.target.value)}
-            placeholder="Например: Z-2026-000123"
-            aria-label="Поиск по номеру заявки"
-          />
-        </div>
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-center justify-between gap-2 sm:hidden">
+          <Drawer open={isMobileFiltersOpen} onOpenChange={(next) => setIsMobileFiltersOpen(next)}>
+            <DrawerTrigger asChild>
+              <Button type="button" variant="secondary" aria-label="Открыть фильтры">
+                <FilterIcon className="mr-2" />
+                Фильтры
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent className="px-4 pb-2">
+              <DrawerHeader>
+                <DrawerTitle>Фильтры</DrawerTitle>
+              </DrawerHeader>
+              <div className="space-y-3">
+                {applicationNumberField}
+                {statusField}
+              </div>
+              <DrawerFooter>
+                <DrawerClose asChild>
+                  <Button type="button" aria-label="Закрыть фильтры">
+                    Применить
+                  </Button>
+                </DrawerClose>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleResetFilters}
+                  aria-label="Сбросить фильтры"
+                >
+                  Сбросить
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
 
-        <div className="w-full sm:max-w-sm">
-          <span className="mb-1 block text-sm font-medium">Статус</span>
-          <Select value={status} onValueChange={(v) => setStatus((v as ApplicationStatus) || '')}>
-            <SelectTrigger className="w-full" aria-label="Фильтр по статусу">
-              <SelectValue placeholder="Все статусы">{selectedStatusLabel}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Все статусы</SelectItem>
-              {applicationStatusSelectOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex w-full justify-end sm:ml-auto sm:w-auto">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setApplicationNumberQuery('')
-              setStatus('')
-            }}
-            aria-label="Сбросить фильтры"
-          >
+          <Button type="button" variant="ghost" onClick={handleResetFilters} aria-label="Сбросить фильтры">
             Сбросить
           </Button>
+        </div>
+
+        <div className="hidden gap-3 sm:flex sm:flex-row sm:items-end">
+          <div className="flex flex-1 flex-wrap gap-3">
+            {applicationNumberField}
+            {statusField}
+          </div>
+          <div className="flex w-full justify-end sm:ml-auto sm:w-auto">
+            <Button type="button" variant="ghost" onClick={handleResetFilters} aria-label="Сбросить фильтры">
+              Сбросить
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -222,7 +284,7 @@ export const ApplicationsListPage = () => {
           title="Не удалось загрузить список"
           description="Проверь API и попробуй ещё раз."
           action={
-            <Button type="button" onClick={() => setReloadToken((v) => v + 1)}>
+            <Button type="button" onClick={() => refetch({ force: true })}>
               Перезагрузить
             </Button>
           }
@@ -240,7 +302,7 @@ export const ApplicationsListPage = () => {
       ) : (
         <div className="rounded-lg border bg-card">
           <Table aria-label="Список заявок">
-            <TableHeader>
+            <TableHeader className="bg-card [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-card">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
@@ -285,43 +347,5 @@ export const ApplicationsListPage = () => {
       )}
     </section>
   )
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const asStringOrNull = (value: unknown) => {
-  if (value === null || value === undefined) return null
-  if (typeof value === 'string') return value
-  return String(value)
-}
-
-const normalizeApplication = (value: unknown): Application | null => {
-  if (!isRecord(value)) return null
-
-  const id = value.id
-  const status = value.status
-  if (typeof id !== 'string') return null
-  if (typeof status !== 'string') return null
-
-  return {
-    id,
-    status: status as ApplicationStatus,
-    applicationNumber: asStringOrNull(value.applicationNumber),
-    createdAt: asStringOrNull(value.createdAt),
-    comment: asStringOrNull(value.comment),
-  }
-}
-
-const normalizeApplicationsListResponse = (response: unknown): Application[] => {
-  const rawItems = Array.isArray(response)
-    ? response
-    : isRecord(response) && Array.isArray(response.items)
-      ? response.items
-      : isRecord(response) && Array.isArray(response.data)
-        ? response.data
-        : []
-
-  return rawItems.map(normalizeApplication).filter((item): item is Application => Boolean(item))
 }
 

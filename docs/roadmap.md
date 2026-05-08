@@ -210,29 +210,28 @@
 
 ## 11) Состояние, кеширование, конкурирующие обновления
 
-- [ ] Выбрать подход к данным:
-  - [ ] вариант A: TanStack Query для кеша/рефетча/мутаций (рекомендуется для REST)
-  - [ ] вариант B: Zustand как thin store + ручной refetch
-- [ ] Реализовать единые хуки:
-  - [ ] `useApplicationsList(query)`
-  - [ ] `useApplication(id)`
-  - [ ] `useInvoices(applicationId)`
-  - [ ] `useMaterialsByApplication(applicationId)`
-  - [ ] `useMaterialsSearch(query)`
-- [ ] После мутаций:
-  - [ ] инвалидировать нужные запросы (особенно `application(id)` из-за серверных автопереходов статуса)
+- [x] Выбрать подход к данным:
+  - [x] вариант B: Zustand как thin store + ручной refetch (кеш + inflight + TTL)
+- [x] Реализовать единые хуки:
+  - [x] `useApplicationsList(query)`
+  - [x] `useApplication(id)`
+  - [x] `useInvoices(applicationId)`
+  - [x] `useMaterialsByApplication(applicationId)`
+  - [x] `useMaterialsSearch(query)`
+- [x] После мутаций:
+  - [x] инвалидировать нужные запросы (особенно `application(id)` из-за серверных автопереходов статуса)
 
 ---
 
 ## 12) Полировка UX и адаптивность
 
 - [ ] Мобильный UX:
-  - [ ] фильтры складываются в Drawer/Accordion
-  - [ ] таблицы: горизонтальный скролл + sticky header (по необходимости)
-  - [ ] действия строк — через DropdownMenu
+  - [x] фильтры складываются в Drawer/Accordion
+  - [x] таблицы: горизонтальный скролл + sticky header (по необходимости)
+  - [x] действия строк — через DropdownMenu
 - [ ] Улучшения:
-  - [ ] подтверждения для “Отметить как оплаченный” (если нужно)
-  - [ ] блокировка кнопок на время мутаций
+  - [x] подтверждения для “Отметить как оплаченный” (если нужно)
+  - [x] блокировка кнопок на время мутаций
   - [ ] optimistic UI там, где безопасно
 - [ ] Финальная проверка сценариев:
   - [ ] создать заявку → увидеть в списке → открыть детали

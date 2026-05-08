@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
-import { materialsApi } from '@/shared/api'
+import { invalidateApplicationAggregate, materialsApi } from '@/shared/api'
 import { toastApiError, toastSuccess } from '@/shared/lib'
 import { Button } from '@/shared/ui/button'
 import {
@@ -80,6 +80,7 @@ export const AddMaterialDialog = ({ applicationId, onCreated }: AddMaterialDialo
                 deliveredQuantity: values.deliveredQuantity,
               })
               toastSuccess('Материал добавлен')
+              invalidateApplicationAggregate(applicationId)
               setIsOpen(false)
               onCreated?.()
             } catch (e) {

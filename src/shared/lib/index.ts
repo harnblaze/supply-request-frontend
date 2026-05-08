@@ -5,4 +5,5 @@ export { resolveFileHref } from './resolveFileHref'
 export { toastError, toastInfo, toastSuccess, toastWarning } from './toast'
 export { toastApiError } from './toastApiError'
 export { useDebouncedValue } from './useDebouncedValue'
+export { stableStringify, useCachedQuery, useQueryCacheStore } from './queryCache'
 

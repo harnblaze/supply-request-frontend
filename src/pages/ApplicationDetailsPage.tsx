@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   type ColumnDef,
@@ -7,25 +7,36 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 
-import type { Application, ApplicationStatus } from '@/entities/application'
 import { applicationStatusLabelRu } from '@/entities/application'
-import type { Invoice, InvoiceStatus } from '@/entities/invoice'
+import type { Invoice } from '@/entities/invoice'
 import { invoiceStatusLabelRu, invoiceStatusRowClassName } from '@/entities/invoice'
 import { AddInvoiceDialog, EditInvoiceDialog } from '@/features/invoice-management'
 import type { Material } from '@/entities/material'
 import { deliveryStatusLabelRu, deliveryStatusRowClassName } from '@/entities/material'
 import { AddMaterialDialog, EditDeliveredQuantityDialog } from '@/features/material-management'
-import { applicationsApi } from '@/shared/api'
-import { invoicesApi } from '@/shared/api'
+import {
+  invalidateApplicationAggregate,
+  useApplication,
+  useInvoices,
+  useMaterialsByApplication,
+} from '@/shared/api'
+import { applicationsApi, invoicesApi } from '@/shared/api'
 import { formatCurrencyRub, formatDateTimeRu, resolveFileHref, toastApiError, toastSuccess } from '@/shared/lib'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu'
 import { EmptyState } from '@/shared/ui/emptyState'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { TableSkeleton } from '@/shared/ui/tableSkeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { updateableApplicationStatuses } from '@/features/application-editor/lib/applicationEditorTypes'
+import { MoreHorizontalIcon } from 'lucide-react'
 
 export const ApplicationDetailsPage = () => {
   const { id } = useParams()
@@ -36,22 +47,30 @@ export const ApplicationDetailsPage = () => {
     return 'invoices'
   })
 
-  const [application, setApplication] = useState<Application | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<unknown>(null)
-  const [reloadToken, setReloadToken] = useState(0)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [isInvoicesLoading, setIsInvoicesLoading] = useState(false)
-  const [invoicesError, setInvoicesError] = useState<unknown>(null)
-  const [invoicesReloadToken, setInvoicesReloadToken] = useState(0)
   const [invoiceActionId, setInvoiceActionId] = useState<string | null>(null)
 
-  const [materials, setMaterials] = useState<Material[]>([])
-  const [isMaterialsLoading, setIsMaterialsLoading] = useState(false)
-  const [materialsError, setMaterialsError] = useState<unknown>(null)
-  const [materialsReloadToken, setMaterialsReloadToken] = useState(0)
+  const {
+    data: application,
+    error,
+    isLoading,
+    refetch: refetchApplication,
+  } = useApplication(id ?? null)
+
+  const {
+    data: invoices = [],
+    error: invoicesError,
+    isLoading: isInvoicesLoading,
+    refetch: refetchInvoices,
+  } = useInvoices(id ?? null)
+
+  const {
+    data: materials = [],
+    error: materialsError,
+    isLoading: isMaterialsLoading,
+    refetch: refetchMaterials,
+  } = useMaterialsByApplication(id ?? null)
 
   useEffect(() => {
     if (!tabStorageKey) return
@@ -73,106 +92,6 @@ export const ApplicationDetailsPage = () => {
       // ignore
     }
   }, [activeTab, tabStorageKey])
-
-  const refetch = useCallback(() => {
-    setReloadToken((v) => v + 1)
-  }, [])
-
-  const refetchInvoices = useCallback(() => {
-    setInvoicesReloadToken((v) => v + 1)
-  }, [])
-
-  const refetchMaterials = useCallback(() => {
-    setMaterialsReloadToken((v) => v + 1)
-  }, [])
-
-  useEffect(() => {
-    if (!id) return
-    let isCancelled = false
-
-    const load = async () => {
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        const response = await applicationsApi.getById<unknown>(id)
-        const normalized = normalizeApplicationDetailsResponse(response)
-
-        if (isCancelled) return
-        setApplication(normalized)
-      } catch (e) {
-        if (isCancelled) return
-        setError(e)
-        toastApiError(e, { title: 'Не удалось загрузить заявку' })
-      } finally {
-        if (!isCancelled) setIsLoading(false)
-      }
-    }
-
-    void load()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [id, reloadToken])
-
-  useEffect(() => {
-    if (!id) return
-    let isCancelled = false
-
-    const loadInvoices = async () => {
-      setIsInvoicesLoading(true)
-      setInvoicesError(null)
-
-      try {
-        const response = await applicationsApi.listInvoices<unknown>(id)
-        const normalized = normalizeInvoicesListResponse(response)
-        if (isCancelled) return
-        setInvoices(normalized)
-      } catch (e) {
-        if (isCancelled) return
-        setInvoicesError(e)
-        toastApiError(e, { title: 'Не удалось загрузить счета' })
-      } finally {
-        if (!isCancelled) setIsInvoicesLoading(false)
-      }
-    }
-
-    void loadInvoices()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [id, invoicesReloadToken])
-
-  useEffect(() => {
-    if (!id) return
-    let isCancelled = false
-
-    const loadMaterials = async () => {
-      setIsMaterialsLoading(true)
-      setMaterialsError(null)
-
-      try {
-        const response = await applicationsApi.listMaterials<unknown>(id)
-        const normalized = normalizeMaterialsListResponse(response)
-        if (isCancelled) return
-        setMaterials(normalized)
-      } catch (e) {
-        if (isCancelled) return
-        setMaterialsError(e)
-        toastApiError(e, { title: 'Не удалось загрузить материалы' })
-      } finally {
-        if (!isCancelled) setIsMaterialsLoading(false)
-      }
-    }
-
-    void loadMaterials()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [id, materialsReloadToken])
 
   const wordFileHref = useMemo(() => resolveFileHref(application?.wordFile ?? null), [application?.wordFile])
 
@@ -230,8 +149,11 @@ export const ApplicationDetailsPage = () => {
             try {
               await invoicesApi.selectForPayment(row.original.id)
               toastSuccess('Счет выбран для оплаты')
-              refetchInvoices()
-              refetch()
+              invalidateApplicationAggregate(id)
+              await Promise.allSettled([
+                refetchInvoices({ force: true }),
+                refetchApplication({ force: true }),
+              ])
             } catch (e) {
               toastApiError(e, { title: 'Не удалось выбрать счет для оплаты' })
             } finally {
@@ -241,12 +163,17 @@ export const ApplicationDetailsPage = () => {
 
           const handleMarkPaid = async () => {
             if (isBusy) return
+            const confirmed = window.confirm('Отметить счет как оплаченный? Это действие нельзя отменить.')
+            if (!confirmed) return
             setInvoiceActionId(row.original.id)
             try {
               await invoicesApi.markPaid(row.original.id)
               toastSuccess('Счет отмечен как оплаченный')
-              refetchInvoices()
-              refetch()
+              invalidateApplicationAggregate(id)
+              await Promise.allSettled([
+                refetchInvoices({ force: true }),
+                refetchApplication({ force: true }),
+              ])
             } catch (e) {
               toastApiError(e, { title: 'Не удалось отметить счет как оплаченный' })
             } finally {
@@ -256,42 +183,95 @@ export const ApplicationDetailsPage = () => {
 
           return (
             <div className="flex flex-col items-end gap-1 sm:flex-row sm:justify-end sm:gap-2">
-              <EditInvoiceDialog
-                invoice={row.original}
-                disabled={isBusy}
-                onUpdated={() => {
-                  refetchInvoices()
-                  refetch()
-                }}
-              />
-              {status === 'NEW' ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleSelectForPayment}
+              <div className="hidden sm:flex sm:flex-row sm:items-center sm:justify-end sm:gap-2">
+                <EditInvoiceDialog
+                  invoice={row.original}
                   disabled={isBusy}
-                  aria-label="Выбрать счет для оплаты"
-                >
-                  {isBusy ? '...' : 'Выбрать для оплаты'}
-                </Button>
-              ) : status === 'SELECTED_FOR_PAYMENT' ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleMarkPaid}
-                  disabled={isBusy}
-                  aria-label="Отметить счет как оплаченный"
-                >
-                  {isBusy ? '...' : 'Отметить как оплаченный'}
-                </Button>
-              ) : null}
+                  onUpdated={() => {
+                    invalidateApplicationAggregate(id)
+                    void refetchInvoices({ force: true })
+                    void refetchApplication({ force: true })
+                  }}
+                />
+                {status === 'NEW' ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleSelectForPayment}
+                    disabled={isBusy}
+                    aria-label="Выбрать счет для оплаты"
+                  >
+                    {isBusy ? '...' : 'Выбрать для оплаты'}
+                  </Button>
+                ) : status === 'SELECTED_FOR_PAYMENT' ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleMarkPaid}
+                    disabled={isBusy}
+                    aria-label="Отметить счет как оплаченный"
+                  >
+                    {isBusy ? '...' : 'Отметить как оплаченный'}
+                  </Button>
+                ) : null}
+              </div>
+
+              <div className="sm:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Действия по счету"
+                        disabled={isBusy}
+                      />
+                    }
+                  >
+                    <MoreHorizontalIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-1 py-1">
+                      <EditInvoiceDialog
+                        invoice={row.original}
+                        disabled={isBusy}
+                        onUpdated={() => {
+                          invalidateApplicationAggregate(id)
+                          void refetchInvoices({ force: true })
+                          void refetchApplication({ force: true })
+                        }}
+                      />
+                    </div>
+                    {status === 'NEW' ? (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.preventDefault()
+                          void handleSelectForPayment()
+                        }}
+                      >
+                        Выбрать для оплаты
+                      </DropdownMenuItem>
+                    ) : status === 'SELECTED_FOR_PAYMENT' ? (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.preventDefault()
+                          void handleMarkPaid()
+                        }}
+                      >
+                        Отметить как оплаченный
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           )
         },
       },
     ],
-    [invoiceActionId, refetch, refetchInvoices],
+    [id, invoiceActionId, refetchApplication, refetchInvoices],
   )
 
   const invoicesTable = useReactTable({
@@ -335,15 +315,16 @@ export const ApplicationDetailsPage = () => {
             <EditDeliveredQuantityDialog
               material={row.original}
               onUpdated={() => {
-                refetchMaterials()
-                refetch()
+                invalidateApplicationAggregate(id)
+                void refetchMaterials({ force: true })
+                void refetchApplication({ force: true })
               }}
             />
           </div>
         ),
       },
     ],
-    [refetch, refetchMaterials],
+    [id, refetchApplication, refetchMaterials],
   )
 
   const materialsTable = useReactTable({
@@ -391,7 +372,7 @@ export const ApplicationDetailsPage = () => {
           title="Не удалось загрузить заявку"
           description="Проверь API и попробуй ещё раз."
           action={
-            <Button type="button" onClick={refetch}>
+            <Button type="button" onClick={() => refetchApplication({ force: true })}>
               Перезагрузить
             </Button>
           }
@@ -453,7 +434,8 @@ export const ApplicationDetailsPage = () => {
                   try {
                     await applicationsApi.update(id, { status: next as 'DRAFT' | 'SENT_TO_SUPPLY' })
                     toastSuccess('Статус заявки обновлён')
-                    refetch()
+                    invalidateApplicationAggregate(id)
+                    await refetchApplication({ force: true })
                   } catch (e) {
                     toastApiError(e, { title: 'Не удалось обновить статус' })
                   } finally {
@@ -535,8 +517,9 @@ export const ApplicationDetailsPage = () => {
               <AddInvoiceDialog
                 applicationId={id}
                 onCreated={() => {
-                  refetchInvoices()
-                  refetch()
+                  invalidateApplicationAggregate(id)
+                  void refetchInvoices({ force: true })
+                  void refetchApplication({ force: true })
                 }}
               />
             </div>
@@ -548,7 +531,7 @@ export const ApplicationDetailsPage = () => {
                 title="Не удалось загрузить счета"
                 description="Проверь API и попробуй ещё раз."
                 action={
-                  <Button type="button" onClick={refetchInvoices}>
+                  <Button type="button" onClick={() => refetchInvoices({ force: true })}>
                     Перезагрузить
                   </Button>
                 }
@@ -558,15 +541,15 @@ export const ApplicationDetailsPage = () => {
                 title="Счетов пока нет"
                 description="Добавь первый счет, чтобы начать оплату."
                 action={
-                  <Button type="button" variant="secondary" onClick={refetchInvoices}>
+                  <Button type="button" variant="secondary" onClick={() => refetchInvoices({ force: true })}>
                     Обновить
                   </Button>
                 }
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div>
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-card [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-card">
                     {invoicesTable.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
@@ -607,8 +590,9 @@ export const ApplicationDetailsPage = () => {
               <AddMaterialDialog
                 applicationId={id}
                 onCreated={() => {
-                  refetchMaterials()
-                  refetch()
+                  invalidateApplicationAggregate(id)
+                  void refetchMaterials({ force: true })
+                  void refetchApplication({ force: true })
                 }}
               />
             </div>
@@ -620,7 +604,7 @@ export const ApplicationDetailsPage = () => {
                 title="Не удалось загрузить материалы"
                 description="Проверь API и попробуй ещё раз."
                 action={
-                  <Button type="button" onClick={refetchMaterials}>
+                  <Button type="button" onClick={() => refetchMaterials({ force: true })}>
                     Перезагрузить
                   </Button>
                 }
@@ -630,15 +614,15 @@ export const ApplicationDetailsPage = () => {
                 title="Материалов пока нет"
                 description="Добавь первый материал, чтобы начать отслеживать поставку."
                 action={
-                  <Button type="button" variant="secondary" onClick={refetchMaterials}>
+                  <Button type="button" variant="secondary" onClick={() => refetchMaterials({ force: true })}>
                     Обновить
                   </Button>
                 }
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div>
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-card [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-card">
                     {materialsTable.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
@@ -673,139 +657,5 @@ export const ApplicationDetailsPage = () => {
       </Tabs>
     </section>
   )
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const asStringOrNull = (value: unknown) => {
-  if (value === null || value === undefined) return null
-  if (typeof value === 'string') return value
-  return String(value)
-}
-
-const pickFirstString = (record: Record<string, unknown>, keys: string[]) => {
-  for (const key of keys) {
-    const value = record[key]
-    if (typeof value === 'string' && value.trim().length > 0) return value
-  }
-  return null
-}
-
-const normalizeApplicationDetailsResponse = (response: unknown): Application | null => {
-  if (!isRecord(response)) return null
-
-  const id = response.id
-  const status = response.status
-  if (typeof id !== 'string') return null
-  if (typeof status !== 'string') return null
-
-  const wordFile = pickFirstString(response, ['wordFile', 'wordFilePath', 'wordFileUrl', 'wordFileName'])
-
-  return {
-    id,
-    status: status as ApplicationStatus,
-    applicationNumber: asStringOrNull(response.applicationNumber),
-    createdAt: asStringOrNull(response.createdAt),
-    comment: asStringOrNull(response.comment),
-    wordFile,
-  }
-}
-
-const normalizeInvoicesListResponse = (response: unknown): Invoice[] => {
-  if (Array.isArray(response)) {
-    return response.map(normalizeInvoice).filter((v): v is Invoice => Boolean(v))
-  }
-
-  if (isRecord(response)) {
-    const maybeItems = response.items
-    if (Array.isArray(maybeItems)) {
-      return maybeItems.map(normalizeInvoice).filter((v): v is Invoice => Boolean(v))
-    }
-  }
-
-  return []
-}
-
-const normalizeInvoice = (value: unknown): Invoice | null => {
-  if (!isRecord(value)) return null
-
-  const id = value.id
-  const status = value.status
-
-  if (typeof id !== 'string') return null
-  if (typeof status !== 'string') return null
-
-  const supplier = typeof value.supplier === 'string' ? value.supplier : ''
-  const amount = typeof value.amount === 'string' ? value.amount : String(value.amount ?? '')
-
-  const pdfFile = pickFirstString(value, ['pdfFile', 'pdfFilePath', 'pdfFileUrl', 'pdfFileName'])
-
-  return {
-    id,
-    status: status as InvoiceStatus,
-    supplier,
-    amount,
-    applicationId: asStringOrNull(value.applicationId),
-    paidAt: asStringOrNull(value.paidAt),
-    pdfFile,
-    createdAt: asStringOrNull(value.createdAt),
-  }
-}
-
-const normalizeMaterialsListResponse = (response: unknown): Material[] => {
-  if (Array.isArray(response)) {
-    return response.map(normalizeMaterial).filter((v): v is Material => Boolean(v))
-  }
-
-  if (isRecord(response)) {
-    const maybeItems = response.items
-    if (Array.isArray(maybeItems)) {
-      return maybeItems.map(normalizeMaterial).filter((v): v is Material => Boolean(v))
-    }
-  }
-
-  return []
-}
-
-const normalizeMaterial = (value: unknown): Material | null => {
-  if (!isRecord(value)) return null
-
-  const id = value.id
-  const deliveryStatus = value.deliveryStatus
-
-  if (typeof id !== 'string') return null
-  if (typeof deliveryStatus !== 'string') return null
-
-  const name = typeof value.name === 'string' ? value.name : ''
-  const orderedQuantity =
-    typeof value.orderedQuantity === 'number'
-      ? value.orderedQuantity
-      : typeof value.orderedQuantity === 'string'
-        ? Number(value.orderedQuantity)
-        : 0
-  const deliveredQuantity =
-    typeof value.deliveredQuantity === 'number'
-      ? value.deliveredQuantity
-      : typeof value.deliveredQuantity === 'string'
-        ? Number(value.deliveredQuantity)
-        : 0
-
-  const deliveredAt = asStringOrNull(
-    isRecord(value)
-      ? (value.deliveredAt ?? value.deliveredDate ?? value.deliveryDate ?? value.deliveredOn ?? null)
-      : null,
-  )
-
-  return {
-    id,
-    deliveryStatus: deliveryStatus as Material['deliveryStatus'],
-    name,
-    orderedQuantity: Number.isFinite(orderedQuantity) ? orderedQuantity : 0,
-    deliveredQuantity: Number.isFinite(deliveredQuantity) ? deliveredQuantity : 0,
-    applicationId: asStringOrNull(value.applicationId),
-    deliveredAt,
-    createdAt: asStringOrNull(value.createdAt),
-  }
 }
 

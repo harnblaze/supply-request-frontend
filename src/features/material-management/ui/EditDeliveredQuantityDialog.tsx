@@ -3,7 +3,7 @@ import { type FieldErrors, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import type { Material } from '@/entities/material'
-import { materialsApi } from '@/shared/api'
+import { invalidateApplicationAggregate, materialsApi } from '@/shared/api'
 import { toastApiError, toastSuccess } from '@/shared/lib'
 import { Button } from '@/shared/ui/button'
 import {
@@ -123,6 +123,7 @@ export const EditDeliveredQuantityDialog = ({
             try {
               await materialsApi.update(material.id, { deliveredQuantity: values.deliveredQuantity })
               toastSuccess('Количество поставки обновлено')
+              if (material.applicationId) invalidateApplicationAggregate(material.applicationId)
               setIsOpen(false)
               onUpdated?.()
             } catch (e) {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
-import { invoicesApi } from '@/shared/api'
+import { invalidateApplicationAggregate, invoicesApi } from '@/shared/api'
 import { toastApiError, toastSuccess } from '@/shared/lib'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
@@ -93,6 +93,7 @@ export const AddInvoiceDialog = ({ applicationId, onCreated }: AddInvoiceDialogP
               }
 
               toastSuccess('Счет добавлен')
+              invalidateApplicationAggregate(applicationId)
               setIsOpen(false)
               onCreated?.()
             } catch (e) {

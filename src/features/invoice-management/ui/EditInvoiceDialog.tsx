@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import type { Invoice } from '@/entities/invoice'
-import { invoicesApi } from '@/shared/api'
+import { invalidateApplicationAggregate, invoicesApi } from '@/shared/api'
 import { toastApiError, toastSuccess } from '@/shared/lib'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
@@ -87,6 +87,7 @@ export const EditInvoiceDialog = ({
               }
 
               toastSuccess('Счет обновлён')
+              if (invoice.applicationId) invalidateApplicationAggregate(invoice.applicationId)
               setIsOpen(false)
               onUpdated?.()
             } catch (e) {
